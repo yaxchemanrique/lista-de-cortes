@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan de Corte — Optimizador de Perfiles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ECEEF0;
+    --surface: #FFFFFF;
+    --ink: #1F2326;
+    --ink-soft: #6B737B;
+    --line: #CBD1D6;
+    --field: #F5F6F7;
+    --accent: #FF6A13;
+    --accent-soft: #FFE3D1;
+    --warn: #B5453A;
+    --warn-soft: #F7E3E0;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+
+  .header { margin-bottom: 28px; }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+    font-weight: 600;
+  }
+
+  h1 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 32px;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+    line-height: 1.15;
+  }
+
+  .subtitle {
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    margin: 0;
+    max-width: 48ch;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .step-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .step-label .num { color: var(--accent); font-weight: 600; }
+
+  .step-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .step-label-row .step-label { margin-bottom: 0; }
+
+  .text-btn {
+    background: none;
+    border: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+  .text-btn:hover { color: var(--warn); }
+
+  .field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+
+  .length-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  input[type="number"] {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--field);
+    color: var(--ink);
+    width: 100%;
+  }
+
+  #profile-length { width: 110px; }
+
+  input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .unit { font-size: 13px; color: var(--ink-soft); }
+
+  .length-cm {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-left: auto;
+  }
+
+  .segments-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .segments-header .row-index-spacer { width: 24px; flex-shrink: 0; }
+  .segments-header .remove-spacer { width: 38px; flex-shrink: 0; }
+  .col-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .width-label { flex: 1; }
+  .qty-label { width: 64px; flex-shrink: 0; text-align: center; }
+
+  .segments-list { margin-bottom: 12px; }
+
+  .segment-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .row-index {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-soft);
+    width: 24px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .segment-input { flex: 1; }
+  .qty-input { width: 64px; flex-shrink: 0; text-align: center; }
+
+  .remove-btn {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 4px;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .remove-btn:hover { border-color: var(--warn); color: var(--warn); }
+
+  .add-btn {
+    width: 100%;
+    padding: 12px;
+    border: 1px dashed var(--line);
+    background: transparent;
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .segments-summary {
+    margin-top: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .calculate-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: var(--ink);
+    border: none;
+    border-radius: 6px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .calculate-btn:hover { background: #FF7A2B; }
+  .calculate-btn:active { transform: translateY(1px); }
+  .calculate-btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+  .error-box {
+    background: var(--warn-soft);
+    border-left: 4px solid var(--warn);
+    border-radius: 4px;
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    color: #7A2E26;
+  }
+
+  .stale-note {
+    background: var(--field);
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+  }
+
+  .results.stale > *:not(.stale-note) { opacity: 0.4; }
+
+  .results-summary {
+    display: flex;
+    gap: 28px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .stat-group { display: flex; flex-direction: column; gap: 4px; }
+
+  .stat-big {
+    font-family: 'Oswald', sans-serif;
+    font-size: 44px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .stat-big-label {
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .stat-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .stat-sub-label {
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .options-note {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .options-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .option-pill {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .option-pill.active {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+
+  .profile-card {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: var(--surface);
+  }
+
+  .profile-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .profile-name { font-weight: 600; font-size: 13px; letter-spacing: 0.08em; }
+  .profile-stock { font-size: 12px; color: var(--ink-soft); }
+
+  .profile-bar {
+    display: flex;
+    height: 44px;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+
+  .bar-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    border-right: 1px dashed rgba(0,0,0,0.18);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .bar-segment:last-child { border-right: none; }
+
+  .bar-waste {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: repeating-linear-gradient(135deg, #E1E4E7, #E1E4E7 6px, #D3D7DB 6px, #D3D7DB 12px);
+  }
+
+  .profile-legend {
+    margin-top: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+  }
+  .profile-legend strong { color: var(--ink); font-weight: 600; }
+
+  .footer {
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 380px) {
+    h1 { font-size: 26px; }
+    .stat-big { font-size: 36px; }
+    .results-summary { gap: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="header">
+    <p class="eyebrow">Corte de perfiles</p>
+    <h1>Planificador de cortes</h1>
+    <p class="subtitle">Ingresa la longitud de tu perfil y las piezas que necesitas cortar. El plan usa la menor cantidad de perfiles posible y te indica dónde hacer cada corte.</p>
+  </header>
+
+  <section class="card">
+    <div class="step-label"><span class="num">01</span> Perfil de material</div>
+    <label class="field-label" for="profile-length">Longitud de un perfil completo</label>
+    <div class="length-row">
+      <input type="number" id="profile-length" value="6.05" step="0.01" min="0.01" inputmode="decimal">
+      <span class="unit">m</span>
+      <span class="length-cm" id="profile-length-cm">= 605 cm</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="step-label-row">
+      <div class="step-label"><span class="num">02</span> Piezas a cortar (cm)</div>
+      <button type="button" id="clear-segments" class="text-btn">Borrar todo</button>
+    </div>
+    <div class="segments-header">
+      <span class="row-index-spacer"></span>
+      <span class="col-label width-label">Ancho (cm)</span>
+      <span class="col-label qty-label">Cant.</span>
+      <span class="remove-spacer"></span>
+    </div>
+    <div id="segments-list" class="segments-list"></div>
+    <button type="button" id="add-segment" class="add-btn">+ Agregar pieza</button>
+    <div class="segments-summary" id="segments-summary"></div>
+  </section>
+
+  <button type="button" id="calculate-btn" class="calculate-btn">Calcular plan de corte</button>
+
+  <div id="error-box" class="error-box" hidden></div>
+
+  <section id="results" class="results" hidden aria-live="polite"></section>
+
+  <footer class="footer">
+    Calcula el menor número de perfiles necesarios y muestra hasta 5 distribuciones con el mismo desperdicio total. La opción 1 concentra el sobrante en el menor número de perfiles posible, para que puedas reutilizarlo en otro proyecto.
+  </footer>
+
+</div>
+
+<script>
+  // ---------- Colour palette for cut pieces ----------
+  const PALETTE = [
+    {bg:'#2D6E7E', fg:'#FFFFFF'},
+    {bg:'#FF6A13', fg:'#1F2326'},
+    {bg:'#C9A227', fg:'#1F2326'},
+    {bg:'#8C4A4A', fg:'#FFFFFF'},
+    {bg:'#5B7553', fg:'#FFFFFF'},
+    {bg:'#6B5B95', fg:'#FFFFFF'},
+    {bg:'#B0762E', fg:'#FFFFFF'},
+    {bg:'#46637A', fg:'#FFFFFF'},
+  ];
+
+  // ---------- Segment row management ----------
+  const segmentsList = document.getElementById('segments-list');
+
+  function addSegmentRow(focus) {
+    const row = document.createElement('div');
+    row.className = 'segment-row';
+    row.innerHTML = `
+      <span class="row-index"></span>
+      <input type="number" class="segment-input" min="1" step="1" inputmode="numeric" placeholder="Ej. 120">
+      <input type="number" class="qty-input" min="1" step="1" value="1" inputmode="numeric">
+      <button type="button" class="remove-btn" aria-label="Eliminar pieza">&times;</button>
+    `;
+    segmentsList.appendChild(row);
+    renumberRows();
+    updateSegmentsSummary();
+
+    const input = row.querySelector('.segment-input');
+    const qtyInput = row.querySelector('.qty-input');
+
+    row.querySelector('.remove-btn').addEventListener('click', () => {
+      row.remove();
+      renumberRows();
+      updateSegmentsSummary();
+      markStale();
+    });
+
+    input.addEventListener('input', () => {
+      updateSegmentsSummary();
+      markStale();
+    });
+    qtyInput.addEventListener('input', () => {
+      updateSegmentsSummary();
+      markStale();
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const rows = Array.from(segmentsList.querySelectorAll('.segment-row'));
+        const idx = rows.indexOf(row);
+        if (idx === rows.length - 1) {
+          addSegmentRow(true);
+        } else {
+          rows[idx + 1].querySelector('.segment-input').focus();
+        }
+      }
+    });
+
+    if (focus) input.focus();
+    return row;
+  }
+
+  function renumberRows() {
+    const rows = segmentsList.querySelectorAll('.segment-row');
+    rows.forEach((row, i) => {
+      row.querySelector('.row-index').textContent = String(i + 1).padStart(2, '0');
+    });
+  }
+
+  function updateSegmentsSummary() {
+    const rows = segmentsList.querySelectorAll('.segment-row');
+    let pieceCount = 0, totalCm = 0;
+    rows.forEach(row => {
+      const w = parseFloat(row.querySelector('.segment-input').value);
+      if (isNaN(w) || w <= 0) return;
+      let q = parseFloat(row.querySelector('.qty-input').value);
+      if (isNaN(q) || q <= 0) q = 1;
+      q = Math.round(q);
+      pieceCount += q;
+      totalCm += Math.round(w) * q;
+    });
+    const el = document.getElementById('segments-summary');
+    el.textContent = pieceCount === 0
+      ? 'Aún no has ingresado piezas.'
+      : `${pieceCount} ${pieceCount === 1 ? 'pieza' : 'piezas'} · ${totalCm.toLocaleString()} cm en total`;
+  }
+
+  document.getElementById('add-segment').addEventListener('click', () => addSegmentRow(true));
+
+  document.getElementById('clear-segments').addEventListener('click', () => {
+    segmentsList.innerHTML = '';
+    addSegmentRow(false);
+    updateSegmentsSummary();
+    markStale();
+  });
+
+  // ---------- Profile length ----------
+  const profileLengthInput = document.getElementById('profile-length');
+
+  function updateProfileCm() {
+    const m = parseFloat(profileLengthInput.value);
+    const cmEl = document.getElementById('profile-length-cm');
+    cmEl.textContent = (!isNaN(m) && m > 0) ? `= ${Math.round(m * 100).toLocaleString()} cm` : '';
+  }
+
+  profileLengthInput.addEventListener('input', () => {
+    updateProfileCm();
+    markStale();
+  });
+
+  profileLengthInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const first = segmentsList.querySelector('.segment-input');
+      if (first) first.focus();
+    }
+  });
+
+  // ---------- Stale results handling ----------
+  function markStale() {
+    const results = document.getElementById('results');
+    if (results.hidden) return;
+    results.classList.add('stale');
+    const note = results.querySelector('.stale-note');
+    if (note) note.hidden = false;
+  }
+
+  // ---------- Bin packing (cutting stock) ----------
+  function findSolutions(items, numBins, capacity, maxSolutions, budget) {
+    const n = items.length;
+    const suffix = new Array(n + 1).fill(0);
+    for (let i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + items[i];
+
+    const bins = Array.from({ length: numBins }, () => ({ remaining: capacity, items: [] }));
+    const results = [];
+    const seen = new Set();
+
+    function canonical() {
+      return bins.map(b => [...b.items].sort((a, b2) => b2 - a).join(',')).sort().join('|');
+    }
+
+    function backtrack(index) {
+      budget.remaining--;
+      if (budget.remaining <= 0) return true;
+      if (results.length >= maxSolutions) return true;
+      if (index === n) {
+        const key = canonical();
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push(bins.map(b => [...b.items]));
+        }
+        return false;
+      }
+
+      let totalRemaining = 0;
+      for (let j = 0; j < numBins; j++) totalRemaining += bins[j].remaining;
+      if (totalRemaining < suffix[index]) return false;
+
+      const item = items[index];
+      const tried = [];
+      for (let j = 0; j < numBins; j++) {
+        const rem = bins[j].remaining;
+        if (rem >= item && tried.indexOf(rem) === -1) {
+          tried.push(rem);
+          bins[j].remaining -= item;
+          bins[j].items.push(item);
+          const stop = backtrack(index + 1);
+          bins[j].items.pop();
+          bins[j].remaining += item;
+          if (stop) return true;
+        }
+      }
+      return false;
+    }
+
+    backtrack(0);
+    return results;
+  }
+
+  function bestFitDecreasing(items, capacity) {
+    const bins = [];
+    for (const item of items) {
+      let best = -1;
+      for (let i = 0; i < bins.length; i++) {
+        if (bins[i].remaining >= item && (best === -1 || bins[i].remaining < bins[best].remaining)) {
+          best = i;
+        }
+      }
+      if (best === -1) {
+        bins.push({ remaining: capacity - item, items: [item] });
+      } else {
+        bins[best].remaining -= item;
+        bins[best].items.push(item);
+      }
+    }
+    return bins.map(b => b.items);
+  }
+
+  // Sort by how concentrated the waste is: an option that leaves nearly all
+  // waste in a single profile (a reusable offcut) ranks first.
+  function wasteSignature(solution, capacity) {
+    return solution.map(bin => capacity - bin.reduce((a, b) => a + b, 0)).sort((a, b) => b - a);
+  }
+
+  function compareByConcentration(a, b, capacity) {
+    const sa = wasteSignature(a, capacity);
+    const sb = wasteSignature(b, capacity);
+    for (let i = 0; i < sa.length; i++) {
+      if (sa[i] !== sb[i]) return sb[i] - sa[i];
+    }
+    return 0;
+  }
+
+  function solveCuttingStock(profileLengthCm, segmentsCm) {
+    const items = [...segmentsCm].sort((a, b) => b - a);
+    const n = items.length;
+    const total = items.reduce((a, b) => a + b, 0);
+    const lowerBound = Math.max(1, Math.ceil(total / profileLengthCm));
+
+    const GLOBAL_BUDGET = 600000;
+    const POOL_SIZE = 40;
+    const budget = { remaining: GLOBAL_BUDGET };
+
+    for (let b = lowerBound; b <= n; b++) {
+      if (budget.remaining <= 0) break;
+      const pool = findSolutions(items, b, profileLengthCm, POOL_SIZE, budget);
+      if (pool.length > 0) {
+        pool.sort((x, y) => compareByConcentration(x, y, profileLengthCm));
+        return {
+          bins: b,
+          solutions: pool.slice(0, 5),
+          totalWaste: b * profileLengthCm - total,
+          total,
+        };
+      }
+    }
+
+    const fallback = bestFitDecreasing(items, profileLengthCm);
+    return {
+      bins: fallback.length,
+      solutions: [fallback],
+      totalWaste: fallback.length * profileLengthCm - total,
+      total,
+    };
+  }
+
+  // ---------- Calculation flow ----------
+  function showError(msg) {
+    const box = document.getElementById('error-box');
+    box.textContent = msg;
+    box.hidden = false;
+  }
+
+  function runCalculation() {
+    const errorBox = document.getElementById('error-box');
+    const results = document.getElementById('results');
+    errorBox.hidden = true;
+
+    const lengthM = parseFloat(profileLengthInput.value);
+    if (isNaN(lengthM) || lengthM <= 0) {
+      results.hidden = true;
+      showError('Ingresa una longitud de perfil mayor a cero.');
+      return;
+    }
+    const profileLengthCm = Math.round(lengthM * 100);
+
+    const rows = Array.from(segmentsList.querySelectorAll('.segment-row'));
+    const segments = [];
+    for (const row of rows) {
+      const rawWidth = row.querySelector('.segment-input').value.trim();
+      if (rawWidth === '') continue;
+
+      const w = Math.round(parseFloat(rawWidth));
+      if (isNaN(w) || w <= 0) {
+        results.hidden = true;
+        showError('El ancho de cada pieza debe ser un número entero mayor a cero, en centímetros.');
+        return;
+      }
+
+      const rawQty = row.querySelector('.qty-input').value.trim();
+      const q = rawQty === '' ? 1 : Math.round(parseFloat(rawQty));
+      if (isNaN(q) || q <= 0) {
+        results.hidden = true;
+        showError('La cantidad de cada pieza debe ser un número entero mayor a cero.');
+        return;
+      }
+
+      for (let i = 0; i < q; i++) segments.push(w);
+    }
+
+    if (segments.length === 0) {
+      results.hidden = true;
+      showError('Agrega al menos una pieza para calcular un plan de corte.');
+      return;
+    }
+
+    const oversized = segments.filter(s => s > profileLengthCm);
+    if (oversized.length > 0) {
+      results.hidden = true;
+      const list = [...new Set(oversized)].sort((a, b) => b - a).join(' cm, ');
+      showError(`Estas piezas son más largas que el perfil de ${profileLengthCm.toLocaleString()} cm y no se pueden cortar de una sola pieza: ${list} cm. Acórtalas o aumenta la longitud del perfil.`);
+      return;
+    }
+
+    const result = solveCuttingStock(profileLengthCm, segments);
+    renderResults(result, profileLengthCm);
+  }
+
+  document.getElementById('calculate-btn').addEventListener('click', runCalculation);
+
+  // ---------- Rendering ----------
+  let currentOption = 0;
+
+  function buildColorMap(solutions) {
+    const uniqueValues = new Set();
+    solutions.forEach(sol => sol.forEach(bin => bin.forEach(v => uniqueValues.add(v))));
+    const sorted = [...uniqueValues].sort((a, b) => b - a);
+    const map = new Map();
+    sorted.forEach((v, i) => map.set(v, PALETTE[i % PALETTE.length]));
+    return map;
+  }
+
+  function renderResults(result, profileLengthCm) {
+    currentOption = 0;
+    const results = document.getElementById('results');
+    results.classList.remove('stale');
+    results.hidden = false;
+    results.innerHTML = '';
+
+    const staleNote = document.createElement('div');
+    staleNote.className = 'stale-note';
+    staleNote.textContent = 'Los datos cambiaron — vuelve a calcular para actualizar este plan.';
+    staleNote.hidden = true;
+    results.appendChild(staleNote);
+
+    const wastePct = (result.totalWaste / (result.bins * profileLengthCm) * 100);
+
+    const summary = document.createElement('div');
+    summary.className = 'results-summary';
+    summary.innerHTML = `
+      <div class="stat-group">
+        <div class="stat-big">${result.bins}</div>
+        <div class="stat-big-label">${result.bins === 1 ? 'perfil necesario' : 'perfiles necesarios'}</div>
+      </div>
+      <div class="stat-group">
+        <div class="stat-sub">${result.total.toLocaleString()} cm</div>
+        <div class="stat-sub-label">material utilizado</div>
+      </div>
+      <div class="stat-group">
+        <div class="stat-sub">${result.totalWaste.toLocaleString()} cm</div>
+        <div class="stat-sub-label">desperdicio (${wastePct.toFixed(1)}%)</div>
+      </div>
+    `;
+    results.appendChild(summary);
+
+    const stepLabel = document.createElement('div');
+    stepLabel.className = 'step-label';
+    stepLabel.innerHTML = `<span class="num">03</span> Plan de corte`;
+    results.appendChild(stepLabel);
+
+    if (result.solutions.length > 1) {
+      const note = document.createElement('div');
+      note.className = 'options-note';
+      note.textContent = `${result.solutions.length} distribuciones usan el mismo desperdicio total. La opción 1 concentra el sobrante en el menor número de perfiles posible; elige la que sea más fácil de cortar.`;
+      results.appendChild(note);
+
+      const optionsRow = document.createElement('div');
+      optionsRow.className = 'options-row';
+      result.solutions.forEach((_, i) => {
+        const pill = document.createElement('button');
+        pill.type = 'button';
+        pill.className = 'option-pill' + (i === 0 ? ' active' : '');
+        pill.textContent = String(i + 1);
+        pill.addEventListener('click', () => {
+          currentOption = i;
+          renderProfiles(result, profileLengthCm);
+          optionsRow.querySelectorAll('.option-pill').forEach((p, j) => p.classList.toggle('active', j === i));
+        });
+        optionsRow.appendChild(pill);
+      });
+      results.appendChild(optionsRow);
+    }
+
+    const profilesContainer = document.createElement('div');
+    profilesContainer.id = 'profiles-container';
+    results.appendChild(profilesContainer);
+
+    renderProfiles(result, profileLengthCm);
+
+    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderProfiles(result, profileLengthCm) {
+    const container = document.getElementById('profiles-container');
+    container.innerHTML = '';
+    const solution = result.solutions[currentOption];
+    const colorMap = buildColorMap(result.solutions);
+
+    solution.forEach((bin, i) => {
+      const sorted = [...bin].sort((a, b) => b - a);
+      const used = sorted.reduce((a, b) => a + b, 0);
+      const waste = profileLengthCm - used;
+
+      const card = document.createElement('div');
+      card.className = 'profile-card';
+
+      const head = document.createElement('div');
+      head.className = 'profile-head';
+      head.innerHTML = `<span class="profile-name">PERFIL ${String(i + 1).padStart(2, '0')}</span><span class="profile-stock">${profileLengthCm.toLocaleString()} cm</span>`;
+      card.appendChild(head);
+
+      const bar = document.createElement('div');
+      bar.className = 'profile-bar';
+      sorted.forEach(item => {
+        const pct = item / profileLengthCm * 100;
+        const seg = document.createElement('div');
+        seg.className = 'bar-segment';
+        seg.style.flexBasis = pct + '%';
+        const c = colorMap.get(item);
+        seg.style.background = c.bg;
+        seg.style.color = c.fg;
+        if (pct >= 7) seg.textContent = item;
+        bar.appendChild(seg);
+      });
+      if (waste > 0) {
+        const w = document.createElement('div');
+        w.className = 'bar-waste';
+        const pct = waste / profileLengthCm * 100;
+        w.style.flexBasis = pct + '%';
+        if (pct >= 7) w.textContent = waste + ' cm';
+        bar.appendChild(w);
+      }
+      card.appendChild(bar);
+
+      const legend = document.createElement('div');
+      legend.className = 'profile-legend';
+      const wastePct = (waste / profileLengthCm * 100).toFixed(1);
+      legend.innerHTML = `Cortes: <strong>${sorted.map(v => v + ' cm').join(', ')}</strong><br>Desperdicio: <strong>${waste.toLocaleString()} cm</strong> (${wastePct}%)`;
+      card.appendChild(legend);
+
+      container.appendChild(card);
+    });
+  }
+
+  // ---------- Init ----------
+  addSegmentRow(false);
+  addSegmentRow(false);
+  addSegmentRow(false);
+  updateProfileCm();
+  updateSegmentsSummary();
+</script>
+</body>
+</html>
