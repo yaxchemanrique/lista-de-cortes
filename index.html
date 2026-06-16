@@ -133,6 +133,7 @@
     border-radius: 4px;
     background: var(--field);
     color: var(--ink);
+    width: auto;
   }
 
   #profile-length { width: 110px; }
@@ -188,7 +189,14 @@
     flex-shrink: 0;
   }
 
-  .segment-input { flex: 1; }
+  .segment-input { flex: 1 1 auto; min-width: 0; }
+  .segment-row { min-width: 0; }
+  .qty-input {
+    width: 48px;
+    flex: 0 0 48px;
+    min-width: 40px;
+    text-align: center;
+  }
   .qty-input { width: 64px; flex-shrink: 0; text-align: center; }
 
   .remove-btn {
